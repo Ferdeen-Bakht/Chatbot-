@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* width */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        /* Track */
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        /* Handle */
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+        }
+
+        /* Handle on hover */
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: rgb(236, 255, 249);
+        }
+
+        body.dark-mode {
+            background-color: #121212;
+            color: white;
+        }
+
+        .container {
+            max-width: 100%;
+        }
+
+        #chatContainer {
+            height: 500px;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+        }
+
+        #chatContainer.dark-mode {
+            background-color: #1e1e1e;
+            border-color: #333;
+        }
+
+        .input-group {
+            position: relative;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #messageInput {
+            width: 100%;
+            height: 60px;
+            padding-right: 100px;
+            box-sizing: border-box;
+            background-color: #f5f5f5;
+        }
+
+        #messageInput.dark-mode {
+            background-color: #333;
+            color: white;
+            border-color: #444;
+        }
+
+        #sendMessage {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            z-index: 10;
+        }
+
+        .list-group-item {
+            cursor: pointer;
+            font-size: 0.9rem;
+            background-color: #f5f5f5;
+        }
+
+        .list-group-item.active {
+            background-color: #727272;
+            border-color: #444;
+            color: white;
+        }
+
+        .list-group-item.dark-mode {
+            background-color: #333;
+            color: white;
+        }
+
+        .list-group-item.dark-mode.active {
+            background-color: #727272;
+            border-color: #444;
+            color: white;
+        }
+
+        .message-container {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .message {
+            max-width: 60%;
+            padding: 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.user-message {
+            background-color: #004085;
+            color: white;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+        }
+
+        .message.bot-message {
+            max-width: 100%;
+            background-color: transparent;
+            color: black;
+            align-self: flex-end;
+            border-radius: 0;
+        }
+
+        .message.user-message.dark-mode {
+            background-color: #004085;
+            color: white;
+        }
+
+        .message.bot-message.dark-mode {
+            background-color: transparent;
+            color: white;
+        }
+
+        .col-3 {
+            height: 600px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-3">
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-secondary" id="newChat">New Chat</button>
+                </div>
+                <ul id="chatList" class="list-group mt-3">
+                    <!-- Chat list items will appear here -->
+                </ul>
+            </div>
+            <div class="col-9">
+                <div class="d-flex justify-content-between">
+                    <h2>ForteBot</h2>
+                    <div>
+                        <button class="btn btn-secondary" id="toggleTheme">Change Theme</button>
+                        <button class="btn btn-secondary"id="logout" href="#">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
+                              <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+                <div id="chatContainer" class="border p-3">
+                    <!-- Chat messages will appear here -->
+                </div>
+                <div class="input-group">
+                    <textarea class="form-control" placeholder="Type your message..." name="messageInput" id="messageInput" cols="30" rows="3"></textarea>
+                    <button class="btn btn-secondary" id="sendMessage">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+    $(document).ready(function () {
+    // Cached jQuery objects for efficient DOM manipulation
+    const $chatContainer = $('#chatContainer');
+    const $messageInput = $('#messageInput');
+    const $sendMessage = $('#sendMessage');
+    const $toggleTheme = $('#toggleTheme');
+    const $newChat = $('#newChat');
+    const $chatList = $('#chatList');
+    const $logout = $('#logout');
+
+    let chats = [];
+    let currentChatIndex = 0;
+
+    // Function to load the chat list into the sidebar
+    function loadChatList() {
+        $chatList.empty(); // Clear existing chat list
+        chats.forEach((chat, index) => {
+            $chatList.append(`
+                <li class="list-group-item ${index === currentChatIndex ? 'active' : ''} ${$('body').hasClass('dark-mode') ? 'dark-mode' : ''}" data-index="${index}">
+                    ${chat.session_name}
+                </li>
+            `);
+        });
+    }
+
+    // Function to load the chat messages of the selected chat
+    function loadChat(index) {
+    $chatContainer.empty(); // Clear existing chat messages
+    if (chats[index]) {
+        chats[index].messages.forEach(function (messageObj) {
+            const userMessageClass = 'user-message';
+            const botMessageClass = 'bot-message';
+
+            $chatContainer.append(`
+                <div class="message-container">
+                    <div class="message ${userMessageClass} ${$('body').hasClass('dark-mode') ? 'dark-mode' : ''}">
+                        You: ${messageObj.message}
+                    </div>
+                </div>
+
+                <div>
+                     <!-- Line break between message and response -->
+                    <div class="message ${botMessageClass} ${$('body').hasClass('dark-mode') ? 'dark-mode' : ''}">
+                        ${messageObj.response}
+                    </div>
+                </div>
+
+            `);
+        });
+        $chatContainer.scrollTop($chatContainer.prop("scrollHeight"));
+    }
+}
+
+
+    // Fetch chat sessions from the server
+    function fetchChats() {
+        $.ajax({
+            url: '/get_chats',
+            type: 'GET',
+            success: function (response) {
+                // Directly assign the chats with messages from the response
+                chats = response.chats;
+                loadChatList(); // Refresh chat list with data from the server
+                if (chats.length > 0) {
+                    loadChat(currentChatIndex); // Load the first chat by default
+                }
+            },
+            error: function () {
+                console.error('Failed to fetch chats');
+            }
+        });
+    }
+
+
+
+    // Add a new message to the chat
+    function addMessage(message, isUser = true) {
+        const formattedMessage = isUser ? `You: ${message}` : message;
+
+        if (!chats[currentChatIndex]) {
+            chats[currentChatIndex] = { messages: [] }; // Initialize chat if it doesn't exist
+        }
+
+        chats[currentChatIndex].messages.push(formattedMessage); // Store the message
+        localStorage.setItem('chats', JSON.stringify(chats)); // Save chats to local storage
+
+        const messageType = isUser ? 'user-message' : 'bot-message';
+        $chatContainer.append(`
+            <div class="message-container">
+                <div class="message ${messageType} ${$('body').hasClass('dark-mode') ? 'dark-mode' : ''}">
+                    ${formattedMessage}
+                </div>
+            </div>
+        `);
+        $chatContainer.scrollTop($chatContainer.prop("scrollHeight"));
+    }
+
+    // Fetch the bot's response via an AJAX POST request
+    function getBotResponse(userMessage) {
+        $.ajax({
+            url: '/chat',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ message: userMessage }),
+            success: function (response) {
+                addMessage(response.response, false); // Add bot response
+            },
+            error: function () {
+                addMessage("Sorry, something went wrong. Please try again.", false);
+            }
+        });
+    }
+
+    // Send message on button click
+    $sendMessage.on('click', function () {
+        const message = $messageInput.val().trim();
+        if (message) {
+            addMessage(message, true); // Add user message
+            $messageInput.val(''); // Clear the input field
+            getBotResponse(message); // Fetch and display bot response
+        }
+    });
+
+    // Send message on Enter key press (without Shift key)
+    $messageInput.on('keypress', function (e) {
+        if (e.which === 13 && !e.shiftKey) {
+            e.preventDefault();
+            $sendMessage.click(); // Trigger send button click
+        }
+    });
+
+    // Toggle between light and dark themes
+    $toggleTheme.on('click', function () {
+        $('body').toggleClass('dark-mode'); // Toggle body class
+        $('#chatContainer, #messageInput, #sendMessage, #chatList').toggleClass('dark-mode');
+        localStorage.setItem('theme', $('body').hasClass('dark-mode') ? 'dark' : 'light'); // Save theme preference
+        loadChatList(); // Refresh chat list with updated theme
+        loadChat(currentChatIndex); // Reload current chat with updated theme
+    });
+
+    // Create a new chat session
+    $newChat.on('click', function () {
+        $.ajax({
+            url: '/new_chat',
+            type: 'POST',
+            success: function (response) {
+                chats.push({ id: response.chat_session_id, session_name: response.session_name, messages: [] });
+                currentChatIndex = chats.length - 1; // Set new chat as current
+                loadChatList(); // Refresh chat list
+                loadChat(currentChatIndex); // Load the new chat
+            },
+            error: function () {
+                console.error('Failed to create new chat');
+            }
+        });
+    });
+
+    // Handle chat selection from the list
+    $chatList.on('click', '.list-group-item', function () {
+        currentChatIndex = $(this).data('index'); // Update current chat index
+        loadChat(currentChatIndex); // Load selected chat
+        loadChatList(); // Refresh chat list to highlight selected chat
+    });
+
+    // Redirect to logout endpoint on click
+    $logout.on('click', function () {
+        window.location.href = '/logout'; // Log out the user
+    });
+
+    // Apply the saved theme on page load
+    if (localStorage.getItem('theme') === 'dark') {
+        $('body').addClass('dark-mode');
+        $('#chatContainer, #messageInput, #sendMessage, #chatList').addClass('dark-mode');
+    }
+
+    // Fetch chats and load the chat list
+    fetchChats();
+});
+
+</script>
+
+</body>
+</html>
